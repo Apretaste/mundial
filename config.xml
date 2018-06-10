@@ -1,0 +1,6 @@
+<service>
+	<serviceName>Mundial</serviceName>
+	<serviceDescription>Consulte informacion y apueste en los partidos del Mundial de Futbol Rusia 2018</serviceDescription>
+	<creatorEmail>ricardo@apretaste.com</creatorEmail>
+	<serviceCategory>ocio</serviceCategory>
+</service>
