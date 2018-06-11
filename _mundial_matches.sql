@@ -2,10 +2,10 @@
 -- version 4.5.4.1deb2ubuntu2
 -- http://www.phpmyadmin.net
 --
--- Host: localhost
--- Generation Time: Jun 07, 2018 at 10:02 AM
--- Server version: 5.7.22-0ubuntu0.16.04.1
--- PHP Version: 7.0.30-0ubuntu0.16.04.1
+-- Servidor: 10.0.0.5:3306
+-- Tiempo de generación: 11-06-2018 a las 00:56:03
+-- Versión del servidor: 5.7.22-0ubuntu0.16.04.1
+-- Versión de PHP: 7.0.30-0ubuntu0.16.04.1
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -17,13 +17,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `apretaste`
+-- Base de datos: `apretaste`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `_mundial_matches`
+-- Estructura de tabla para la tabla `_mundial_matches`
 --
 
 CREATE TABLE `_mundial_matches` (
@@ -36,11 +36,11 @@ CREATE TABLE `_mundial_matches` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
--- Indexes for dumped tables
+-- Índices para tablas volcadas
 --
 
 --
--- Indexes for table `_mundial_matches`
+-- Indices de la tabla `_mundial_matches`
 --
 ALTER TABLE `_mundial_matches`
   ADD PRIMARY KEY (`start_date`);

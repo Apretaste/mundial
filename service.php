@@ -49,17 +49,26 @@ class Mundial extends Service{
         $response->createFromTemplate("nocredit.tpl", $responseContent);
         return $response;
       }
+      $q=Connection::query("SELECT home_team,visitor_team FROM _mundial_matches WHERE start_date='".date("Y-m-d H:i:s",$match)."' AND start_date>CURRENT_TIMESTAMP");
 
-    $confirmationHash = $this->utils->generateRandomHash();
-    Connection::query("INSERT INTO transfer(sender,receiver,amount,confirmation_hash,inventory_code) VALUES ('{$request->email}', 'salvi@apretaste.com', '$amount', '$confirmationHash', 'BET ".$match." ".substr($team,0,4)."')");
-    $response = new Response();
-    $response->subject = "Confirmar apuesta";
-    $response->createFromTemplate("confirmBet.tpl", array('amount' => $amount, 'hash' => $confirmationHash, 'team' => $team));
+      if(!isset($q[0])){
+        $response=new Response();
+        $response->subject="Error al apostar";
+        $response->createFromText("El partido por el que usted intenta apostar no existe o ya comenzo");
+        return $response;
+      }
+
+      $confirmationHash = $this->utils->generateRandomHash();
+      Connection::query("INSERT INTO transfer(sender,receiver,amount,confirmation_hash,inventory_code) VALUES ('{$request->email}', 'salvi@apretaste.com', '$amount', '$confirmationHash', 'BET ".$match." ".substr($team,0,4)."')");
+      $team=($team=="HOME")?$q[0]->home_team:$q[0]->visitor_team;
+      $response = new Response();
+      $response->subject = "Confirmar apuesta";
+      $response->createFromTemplate("confirmBet.tpl", array('amount' => $amount, 'hash' => $confirmationHash, 'team' => $team));
     }
     else {
       $this->updateMatches();
       $matches=Connection::query("SELECT * FROM _mundial_matches WHERE 
-      UNIX_TIMESTAMP(start_date)-UNIX_TIMESTAMP(CURRENT_TIMESTAMP)<172800*3 
+      UNIX_TIMESTAMP(start_date)-UNIX_TIMESTAMP(CURRENT_TIMESTAMP)<172800 
       AND start_date>CURRENT_TIMESTAMP"); //Proximos 2 dias 172800
       $dtz = new DateTimeZone("America/Havana"); //Your timezone
       foreach ($matches as $match) {
@@ -172,7 +181,7 @@ class Mundial extends Service{
   
   public function getGamesDataFromCache(){
     $cacheFile = $this->utils->getTempDir() . date("Ymd") . "_calendario_mundial.tmp";
-    $cacheInMinutes=5; //For the results in the bets every 5 minutes
+    $cacheInMinutes=1; //For the results in the bets every minute
 		if(file_exists($cacheFile)){
       $data = json_decode(file_get_contents($cacheFile),true); //Load the data in json format
       if (time()-intval(($data['date']))>(60*$cacheInMinutes)) {
@@ -269,7 +278,7 @@ class Mundial extends Service{
         }
         
         if ($start_date<time() and $end_date>time() ) {
-          if (time()-filemtime($cacheFile)>300) { //Cada 5 minutos
+          if (time()-filemtime($cacheFile)>60) { //Cada minuto
             $matchData=['lastUpdate' => time(),'results' => '0-0']; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
             Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
