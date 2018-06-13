@@ -32,7 +32,8 @@ CREATE TABLE `_mundial_matches` (
   `home_team` varchar(20) NOT NULL,
   `visitor_team` varchar(20) NOT NULL,
   `results` varchar(3) DEFAULT NULL,
-  `winner` varchar(20) DEFAULT NULL
+  `winner` varchar(20) DEFAULT NULL,
+  `payed` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
