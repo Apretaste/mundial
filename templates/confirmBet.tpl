@@ -1,9 +1,9 @@
-<p>&iquest;Esta seguro que quiere apostar <b>{$amount}&sect;</b> al equipo <b>{$team}</b>?. Confirme presionando el bot&oacute;n m&aacute;s abajo.</p>
+<p>&iquest;Esta seguro que quiere jugar <b>{$amount}&sect;</b> al equipo <b>{$team}</b>?. Confirme presionando el bot&oacute;n m&aacute;s abajo.</p>
 
 {space10}
 
 <center>
-	{button href="CREDITO ACEPTAR {$hash}" caption="Apostar &sect;{$amount|money_format}"}
+	{button href="CREDITO ACEPTAR {$hash}" caption="Jugar &sect;{$amount|money_format}"}
 </center>
 
 {space10}

@@ -1,3 +1,4 @@
+{include file="../includes/appmenu.tpl"}
 <center>
 <h1>​ Calendario del Mundial 2018​ </h1>
 <h2>Fase de Grupos</h2>
