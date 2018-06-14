@@ -115,7 +115,7 @@ class Mundial extends Service{
     $crawler->filter('div.container-fluid > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseGrupos){
       $fecha=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
-      $item->filter('div.fi-mu.fixture')->each(function($item,$i) use (&$juegos){
+      $item->filter('div.fi-mu.fixture, div.fi-mu.result')->each(function($item,$i) use (&$juegos){
         $hora=$item->filter('div.fi-mu__info__datetime')->text();
         $hora=str_replace(' Hora Local','',$hora);
         $horautc=substr($item->filter('div.fi-s__score.fi-s__date-HHmm')->attr('data-timeutc'),0,2);
@@ -318,7 +318,7 @@ class Mundial extends Service{
       $losers=Connection::query("SELECT * FROM _mundial_bets WHERE
       `match`='{$finishMatch->start_date}' AND `team`='{$loserTeam}' AND active=1");
       foreach ($winners as $winner) {
-        $ganancia=($winner->team=="HOME")?$home_bets:$visitor_bets;
+        $ganancia=($winner->team=="HOME")?$visitor_bets:$home_bets;
         $ganancia=$winner->amount*(1+$ganancia);
         Connection::query("START TRANSACTION;
         UPDATE person SET credit=credit+$ganancia WHERE `email`='{$winner->user}';
