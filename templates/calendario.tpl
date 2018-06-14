@@ -19,14 +19,17 @@
           {$juego['grupo']}<br>
           {$juego['estadio']}<br>
           {$juego['ciudad']}
+          {if $juego['results']!=""}
+            <br>Resultados: {$juego['results']}
+          {/if}
         </td>
         <td align="center">
         {$juego['homeTeam']}<br>
-        {$juego['homeIcon']} 
+        <p style="font-weight: bold;font-size: 2em; margin:0;">{$juego['homeIcon']}</p>
         </td>
         <td align="center">
         {$juego['visitorTeam']}<br>
-        {$juego['visitorIcon']}
+        <p style="font-weight: bold;font-size: 2em; margin:0;">{$juego['visitorIcon']}</p>
         </td>
       </tr>
     {/foreach}

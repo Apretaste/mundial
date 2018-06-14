@@ -1,6 +1,27 @@
 {include file="../includes/appmenu.tpl"}
 <center>
 <h1>​Mundial 2018​ </h1>
+{if $nowGame!=""}
+  <table width="100%" style="margin-left:auto; margin-right:auto;">
+    <tr>
+      <th colspan="3"><h2 style="margin:0;">Justo ahora!</h2></th>
+    </tr>
+    <tr>
+      <td align="center" colspan="3">{$nowGame['hora']}</td>
+    </tr>
+    <tr>
+      <td align="center" width="40%">
+        <h2 style="margin:0;">{$nowGame['homeTeam']}</h2>
+        <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['homeIcon']}</p>
+      </td>
+      <td align="center" width="20%"><h2 style="margin:0;">{$nowGame['results']}</h2></td>
+      <td align="center" width="40%">
+        <h2 style="margin:0;">{$nowGame['visitorTeam']}</h2>
+        <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['visitorIcon']}</p>
+      </td>
+    </tr>
+  </table>
+{/if}
 <h2>Partidos de hoy</h2>
   {if $dayMatches!=false}
   <table width="100%" border="1" style="margin-left:auto; margin-right:auto;">
@@ -19,14 +40,17 @@
           {$juego['grupo']}<br>
           {$juego['estadio']}<br>
           {$juego['ciudad']}
+          {if $juego['results']!=""}
+            <br>Resultados: {$juego['results']}
+          {/if}
         </td>
         <td align="center">
         {$juego['homeTeam']}<br>
-        {$juego['homeIcon']} 
+        <p style="font-weight: bold;font-size: 2em; margin:0;">{$juego['homeIcon']}</p>
         </td>
         <td align="center">
         {$juego['visitorTeam']}<br>
-        {$juego['visitorIcon']}
+        <p style="font-weight: bold;font-size: 2em; margin:0;">{$juego['visitorIcon']}</p>
         </td>
       </tr>
     {/foreach}

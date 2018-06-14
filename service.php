@@ -17,10 +17,16 @@ class Mundial extends Service{
         $dayMatches=$dia;
       }
     }
+    $nowGame="";
+    foreach ($dayMatches['juegos'] as $juego) {
+      if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+6000>time()) {
+        $nowGame=$juego;
+      }
+    }
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
-    $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches));
-    $response->setCache(6);
+    $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches, 'nowGame' => $nowGame));
+    $response->setCache(1);
     return $response;
   }
 
@@ -125,6 +131,8 @@ class Mundial extends Service{
         $grupo=$item->filter('div.fi__info__group')->text();
         $estadio=$item->filter('div.fi__info__location > div.fi__info__stadium')->text();
         $ciudad=$item->filter('div.fi__info__location > div.fi__info__venue')->text();
+        $results=trim($item->filter('div.fi-mu__m > div.fi-s-wrap span.fi-s__scoreText')->text());
+        $results=(strlen($results)==3)?$results:"";
         //$estado=$item->filter('div.fi-mu__status > div.fi-s__status')->text();
         $homeTeam=$item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nText')->text();
         $homeIcon=$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text());
@@ -140,7 +148,8 @@ class Mundial extends Service{
                   'homeTeam' => $homeTeam,
                   'homeIcon' => $homeIcon,
                   'visitorTeam' => $visitorTeam,
-                  'visitorIcon' => $visitorIcon];
+                  'visitorIcon' => $visitorIcon,
+                  'results' => $results];
       });
       $faseGrupos[]=['fecha' => $fecha,
                     'juegos' => $juegos];
@@ -148,6 +157,7 @@ class Mundial extends Service{
 
     $faseEliminatorias=array();
     $crawler=$client->request('GET','https://es.fifa.com/worldcup/matches/#knockoutphase');
+    //die($crawler->html());
     $crawler->filter('div#fi-list-view > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseEliminatorias){
       $fase=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
@@ -291,7 +301,7 @@ class Mundial extends Service{
 
         if ($start_date<time() and $end_date>time() ) {
           if (time()-filemtime($cacheFile)>60) { //Cada minuto
-            $matchData=['lastUpdate' => time(),'results' => '0-0']; //Aqui modificamos los resultados del partido;
+            $matchData=['lastUpdate' => time(),'results' => $juego['results']]; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
             Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
           }
