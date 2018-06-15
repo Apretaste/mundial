@@ -19,7 +19,7 @@ class Mundial extends Service{
     }
     $nowGame="";
     foreach ($dayMatches['juegos'] as $juego) {
-      if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+6000>time()) {
+      if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+7200>time()) {
         $this->updateMatches();
         $cacheFile = $this->utils->getTempDir().$this->matchTimestamp($juego)."_match_mundial.tmp";
         $matchData=json_decode(file_get_contents($cacheFile),true);
