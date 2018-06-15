@@ -133,7 +133,7 @@ class Mundial extends Service{
         $ciudad=$item->filter('div.fi__info__location > div.fi__info__venue')->text();
         $results=trim($item->filter('div.fi-mu__m > div.fi-s-wrap span.fi-s__scoreText')->text());
         $results=(strlen($results)==3)?$results:"";
-        //$estado=$item->filter('div.fi-mu__status > div.fi-s__status')->text();
+        $estado=($item->filter('div.fi-mu__status > div.fi-s__status span:not(.hidden)')->count()>0)?trim($item->filter('div.fi-mu__status > div.fi-s__status span:not(.hidden)')->text()):"";
         $homeTeam=$item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nText')->text();
         $homeIcon=$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text());
         $visitorTeam=$item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nText')->text();
@@ -149,6 +149,7 @@ class Mundial extends Service{
                   'homeIcon' => $homeIcon,
                   'visitorTeam' => $visitorTeam,
                   'visitorIcon' => $visitorIcon,
+                  'status' => $estado,
                   'results' => $results];
       });
       $faseGrupos[]=['fecha' => $fecha,
@@ -157,7 +158,6 @@ class Mundial extends Service{
 
     $faseEliminatorias=array();
     $crawler=$client->request('GET','https://es.fifa.com/worldcup/matches/#knockoutphase');
-    //die($crawler->html());
     $crawler->filter('div#fi-list-view > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseEliminatorias){
       $fase=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
@@ -301,9 +301,25 @@ class Mundial extends Service{
 
         if ($start_date<time() and $end_date>time() ) {
           if (time()-filemtime($cacheFile)>60) { //Cada minuto
-            $matchData=['lastUpdate' => time(),'results' => $juego['results']]; //Aqui modificamos los resultados del partido;
+            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status']]; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
-            Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
+            if ($matchData['status']=='Final del partido') {
+              $golesHome=intval(substr($matchData['results'],0,1));
+              $golesVisitante=intval(substr($matchData['results'],2,1));
+              if ($golesHome>$golesVisitante) {
+                $winner="HOME";
+              }
+              elseif ($golesVisitante>$golesHome) {
+                $winner="VISITOR";
+              }
+              else {
+                $winner="TIE";
+              }
+              Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."',winner='".$winner."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
+            }
+            else {
+              Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
+            }
           }
         }
       }
@@ -315,30 +331,45 @@ class Mundial extends Service{
     $finishedMatches=Connection::query("SELECT * FROM _mundial_matches WHERE
     UNIX_TIMESTAMP(CURRENT_TIMESTAMP)-UNIX_TIMESTAMP(end_date)>3600 AND payed=0 AND winner IS NOT NULL");
     foreach ($finishedMatches as $finishMatch) {
-      $percents=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
-      (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='HOME') as t1,
-      (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='VISITOR') as t2,
-      (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}') as t3");
-      $total_bets= ($percents[0]->total_bets>0) ? $percents[0]->total_bets : 1;
-      $home_bets=($percents[0]->home_bets/$total_bets);
-      $visitor_bets=($percents[0]->visitor_bets/$total_bets);
-      $loserTeam=($finishMatch->winner=="HOME")?"VISITOR":"HOME";
-      $winners=Connection::query("SELECT * FROM _mundial_bets WHERE
-      `match`='{$finishMatch->start_date}' AND `team`='{$finishMatch->winner}' AND active=1");
-      $losers=Connection::query("SELECT * FROM _mundial_bets WHERE
-      `match`='{$finishMatch->start_date}' AND `team`='{$loserTeam}' AND active=1");
-      foreach ($winners as $winner) {
-        $ganancia=($winner->team=="HOME")?$visitor_bets:$home_bets;
-        $ganancia=$winner->amount*(1+$ganancia);
-        Connection::query("START TRANSACTION;
-        UPDATE person SET credit=credit+$ganancia WHERE `email`='{$winner->user}';
-        UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}';
-        COMMIT;");
-        $this->utils->addNotification($winner->user, 'Mundial',"El equipo al que jugo gano el partido, usted gano $ganancia", 'CREDITO', 'IMPORTANT');
+
+      if ($finishMatch->winner=='TIE') {
+        $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
+        `match`='{$finishMatch->start_date}' AND  active=1");
+        foreach ($punters as $punter) {
+          Connection::query("START TRANSACTION;
+          UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
+          UPDATE person SET credit=credit+$punter->amount WHERE `email`='{$punter->user}';
+          UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
+          COMMIT;");
+          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera su apuesta", 'MUNDIAL', 'IMPORTANT');
+        }
       }
-      foreach ($losers as $loser) {
-        Connection::query("UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}'");
-        $this->utils->addNotification($loser->user, 'Mundial',"El equipo al que jugo perdio el partido, usted no gano nada", 'MUNDIAL JUEGOS', 'IMPORTANT');
+      else {
+        $percents=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
+        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='HOME') as t1,
+        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='VISITOR') as t2,
+        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}') as t3");
+        $total_bets= ($percents[0]->total_bets>0) ? $percents[0]->total_bets : 1;
+        $home_bets=($percents[0]->home_bets/$total_bets);
+        $visitor_bets=($percents[0]->visitor_bets/$total_bets);
+        $loserTeam=($finishMatch->winner=="HOME")?"VISITOR":"HOME";
+        $winners=Connection::query("SELECT * FROM _mundial_bets WHERE
+        `match`='{$finishMatch->start_date}' AND `team`='{$finishMatch->winner}' AND active=1");
+        $losers=Connection::query("SELECT * FROM _mundial_bets WHERE
+        `match`='{$finishMatch->start_date}' AND `team`='{$loserTeam}' AND active=1");
+        foreach ($winners as $winner) {
+          $ganancia=($winner->team=="HOME")?$visitor_bets:$home_bets;
+          $ganancia=$winner->amount*(1+$ganancia);
+          Connection::query("START TRANSACTION;
+          UPDATE person SET credit=credit+$ganancia WHERE `email`='{$winner->user}';
+          UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}';
+          COMMIT;");
+          $this->utils->addNotification($winner->user, 'Mundial',"El equipo al que jugo gano el partido, usted gano $ganancia", 'MUNDIAL', 'IMPORTANT');
+        }
+        foreach ($losers as $loser) {
+          Connection::query("UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}'");
+          $this->utils->addNotification($loser->user, 'Mundial',"El equipo al que jugo perdio el partido, usted no gano nada", 'MUNDIAL', 'IMPORTANT');
+        }
       }
       Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
     }
