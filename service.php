@@ -310,25 +310,28 @@ class Mundial extends Service{
             $crawler=$client->request('GET',$juego['link']);
             $juego['results']=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text());
             $minutes=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-mu__status > div.fi-s__status > span.period.minute')->text());
-            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes]; //Aqui modificamos los resultados del partido;
+            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes, 'ended' => 0]; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
-            if ($matchData['status']=='Final del partido') {
-              $golesHome=intval(substr($matchData['results'],0,1));
-              $golesVisitante=intval(substr($matchData['results'],2,1));
-              if ($golesHome>$golesVisitante) {
-                $winner="HOME";
-              }
-              elseif ($golesVisitante>$golesHome) {
-                $winner="VISITOR";
-              }
-              else {
-                $winner="TIE";
-              }
-              Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."',winner='".$winner."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
+            Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
+          }
+        }
+
+        if ($end_date<time() and $end_date+3600>time() and $matchData['status']=='Final del partido') {
+          $golesHome=intval(substr($matchData['results'],0,1));
+          $golesVisitante=intval(substr($matchData['results'],2,1));
+          if ($matchData['ended']==0) {
+            if ($golesHome>$golesVisitante) {
+              $winner="HOME";
+            }
+            elseif ($golesVisitante>$golesHome) {
+              $winner="VISITOR";
             }
             else {
-              Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date=".date("Y-m-d H:i:s",$start_date));
+              $winner="TIE";
             }
+            Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."',winner='".$winner."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
+            $matchData['ended']=1;
+            file_put_contents($cacheFile,json_encode($matchData));
           }
         }
       }
