@@ -316,7 +316,7 @@ class Mundial extends Service{
           }
         }
 
-        if ($end_date<time() and $end_date+3600>time() and $matchData['status']=='Final del partido') {
+        if ($end_date<time() and $end_date+600>time() and $matchData['status']=='Final del partido') {
           $golesHome=intval(substr($matchData['results'],0,1));
           $golesVisitante=intval(substr($matchData['results'],2,1));
           if ($matchData['ended']==0) {
@@ -341,7 +341,7 @@ class Mundial extends Service{
   {
     //Query para los pagos de las apuestas
     $finishedMatches=Connection::query("SELECT * FROM _mundial_matches WHERE
-    UNIX_TIMESTAMP(CURRENT_TIMESTAMP)-UNIX_TIMESTAMP(end_date)>3600 AND payed=0 AND winner IS NOT NULL");
+    UNIX_TIMESTAMP(CURRENT_TIMESTAMP)-UNIX_TIMESTAMP(end_date)>600 AND payed=0 AND winner IS NOT NULL");
     foreach ($finishedMatches as $finishMatch) {
 
       if ($finishMatch->winner=='TIE') {
