@@ -379,7 +379,7 @@ class Mundial extends Service{
           $this->utils->addNotification($winner->user, 'Mundial',"El equipo al que jugo gano el partido, usted gano $ganancia", 'MUNDIAL', 'IMPORTANT');
         }
         foreach ($losers as $loser) {
-          Connection::query("UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}'");
+          Connection::query("UPDATE _mundial_bets SET active=0 WHERE `user`='{$loser->user}' AND `match`='{$finishMatch->start_date}'");
           $this->utils->addNotification($loser->user, 'Mundial',"El equipo al que jugo perdio el partido, usted no gano nada", 'MUNDIAL', 'IMPORTANT');
         }
       }
