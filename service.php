@@ -308,7 +308,7 @@ class Mundial extends Service{
           if (time()-filemtime($cacheFile)>60) { //Cada minuto
             $client=new Client();
             $crawler=$client->request('GET',$juego['link']);
-            $juego['results']=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text());
+            $juego['results']=($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->count()>0)?trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text()):"0-0";
             $minutes=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-mu__status > div.fi-s__status > span.period.minute')->text());
             $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes, 'ended' => 0]; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
