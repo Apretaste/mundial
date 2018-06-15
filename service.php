@@ -341,7 +341,7 @@ class Mundial extends Service{
           UPDATE person SET credit=credit+$punter->amount WHERE `email`='{$punter->user}';
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           COMMIT;");
-          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera su apuesta", 'MUNDIAL', 'IMPORTANT');
+          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera su inversion", 'MUNDIAL', 'IMPORTANT');
         }
       }
       else {
@@ -373,5 +373,72 @@ class Mundial extends Service{
       }
       Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
     }
+  }
+  /**
+   * @param Request
+   * @return Response
+   * Estadisticas de la fase de grupos del mundial
+   */
+  public function _estadisticas(Request $request)
+  {
+    $grupos=$this->getStatisticsDataFromCache();
+    $grupos['this']=$this;
+    $response=new Response();
+    $response->setEmailLayout('mundial.tpl');
+    $response->setCache(4);
+    $response->createFromTemplate("estadisticas.tpl",$grupos);
+    return $response;
+  }
+
+  /**
+   * @return Array
+   */
+  public function getStatisticsDataFromCache(){
+    $cacheFile = $this->utils->getTempDir() . date("Ymd") . "_statistics_mundial.tmp";
+    $cacheInMinutes=240; //Every 4 hours
+    if(file_exists($cacheFile)){
+      $data = json_decode(file_get_contents($cacheFile),true); //Load the data in json format
+      if (time()-intval(($data['date']))>(60*$cacheInMinutes)) {
+        //Request the data
+        $data=$this->getStatistics();
+        // save cache file for today
+        file_put_contents($cacheFile, json_encode($data));
+      }
+    }
+    else
+    {
+      $data=$this->getStatistics(); //Request the data
+      // save cache file for today
+      file_put_contents($cacheFile, json_encode($data));
+    }
+    return $data;
+  }
+
+  /**
+   * @return Array
+   */
+  public function getStatistics(){
+    $client=new Client();
+    $crawler=$client->request('GET','https://es.fifa.com/worldcup/groups/');
+    $grupos=array();
+    $crawler->filter('table.fi-table.fi-standings')->each(function($item,$i)use (&$grupos){
+      $headers=array();
+      $rows=array();
+      $tituloGrupo=$item->filter('caption.fi-table__caption > p.fi-table__caption__title')->text();
+      $item->filter('thead > tr > th')->each(function($header,$i) use (&$headers){
+        $headers[]=$header->text();
+      });
+      $item->filter('tbody > tr:not(.fi-table__matches-expand):not(.expandrow):not(.hidden)')->each(function($row,$i) use (&$rows){
+        $columns=array();
+        $row->filter('td span:last-child')->each(function($colum,$i) use (&$columns){
+          $columns[]=($colum->text()!="-123456")?$colum->text():"0";
+        });
+        $rows[]=$columns;
+      });
+      $grupos[]=['grupo' => $tituloGrupo,
+                 'headers' => $headers,
+                 'rows' => $rows];
+    });
+    return array('grupos' => $grupos, 'date' => time());
   }
 }
