@@ -20,7 +20,12 @@ class Mundial extends Service{
     $nowGame="";
     foreach ($dayMatches['juegos'] as $juego) {
       if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+6000>time()) {
+        $this->updateMatches();
+        $cacheFile = $this->utils->getTempDir().$this->matchTimestamp($juego)."_match_mundial.tmp";
+        $matchData=json_decode(file_get_contents($cacheFile),true);
         $nowGame=$juego;
+        $nowGame['results']=$matchData['results'];
+        $nowGame['minutes']=$matchData['minutes'];
       }
     }
     $response=new Response();
@@ -121,7 +126,7 @@ class Mundial extends Service{
     $crawler->filter('div.container-fluid > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseGrupos){
       $fecha=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
-      $item->filter('div.fi-mu.fixture, div.fi-mu.result')->each(function($item,$i) use (&$juegos){
+      $item->filter('a.fi-mu__link')->each(function($item,$i) use (&$juegos){
         $hora=$item->filter('div.fi-mu__info__datetime')->text();
         $hora=str_replace(' Hora Local','',$hora);
         $horautc=substr($item->filter('div.fi-s__score.fi-s__date-HHmm')->attr('data-timeutc'),0,2);
@@ -138,6 +143,7 @@ class Mundial extends Service{
         $homeIcon=$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text());
         $visitorTeam=$item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nText')->text();
         $visitorIcon=$this->icon($item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nTri')->text());
+        $link="https://es.fifa.com".$item->attr('href');
         //$detalles=$item->filter('div.fi-mu__m > div.fi-mu__details')->text();
 
         $juegos[]=['hora' => $hora,
@@ -150,7 +156,8 @@ class Mundial extends Service{
                   'visitorTeam' => $visitorTeam,
                   'visitorIcon' => $visitorIcon,
                   'status' => $estado,
-                  'results' => $results];
+                  'results' => $results,
+                  'link' => $link];
       });
       $faseGrupos[]=['fecha' => $fecha,
                     'juegos' => $juegos];
@@ -284,11 +291,10 @@ class Mundial extends Service{
 
   public function updateMatches(){
     $data=$this->getGamesDataFromCache();
-
     foreach ($data['faseGrupos'] as $day) {
       foreach ($day['juegos'] as $juego) {
         $start_date=$this->matchTimestamp($juego);
-        $end_date=$start_date+6000; //1:40 hours
+        $end_date=$start_date+7200; //2 hours
         $cacheFile = $this->utils->getTempDir() . $start_date . "_match_mundial.tmp";
         if ($end_date>time()) {
           if (!file_exists($cacheFile)) {
@@ -298,10 +304,13 @@ class Mundial extends Service{
           }
           $matchData=json_decode(file_get_contents($cacheFile),true);
         }
-
-        if ($start_date<time() and $end_date>time() ) {
+        if ($start_date<time() and $end_date>time()) {
           if (time()-filemtime($cacheFile)>60) { //Cada minuto
-            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status']]; //Aqui modificamos los resultados del partido;
+            $client=new Client();
+            $crawler=$client->request('GET',$juego['link']);
+            $juego['results']=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text());
+            $minutes=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-mu__status > div.fi-s__status > span.period.minute')->text());
+            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes]; //Aqui modificamos los resultados del partido;
             file_put_contents($cacheFile,json_encode($matchData));
             if ($matchData['status']=='Final del partido') {
               $golesHome=intval(substr($matchData['results'],0,1));

@@ -14,7 +14,7 @@
         <h2 style="margin:0;">{$nowGame['homeTeam']}</h2>
         <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['homeIcon']}</p>
       </td>
-      <td align="center" width="20%"><h2 style="margin:0;">{$nowGame['results']}</h2></td>
+      <td align="center" width="20%"><h2 style="margin:0;">{$nowGame['minutes']}<br>{$nowGame['results']}</h2></td>
       <td align="center" width="40%">
         <h2 style="margin:0;">{$nowGame['visitorTeam']}</h2>
         <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['visitorIcon']}</p>
