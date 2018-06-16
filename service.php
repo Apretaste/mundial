@@ -349,12 +349,13 @@ class Mundial extends Service{
         $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND  active=1");
         foreach ($punters as $punter) {
+          $retorno=intval($punter->amount)/2;
           Connection::query("START TRANSACTION;
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
-          UPDATE person SET credit=credit+$punter->amount WHERE `email`='{$punter->user}';
+          UPDATE person SET credit=credit+$retorno WHERE `email`='{$punter->user}';
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           COMMIT;");
-          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera su inversion", 'MUNDIAL', 'IMPORTANT');
+          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera el 50% de su inversion", 'MUNDIAL', 'IMPORTANT');
         }
       }
       else {
