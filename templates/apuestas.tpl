@@ -2,6 +2,10 @@
 <center>
 <h1>Partidos planificados</h1>
 <h2>Juegue por el equipo de su preferencia</h2>
+<small>Gana: inversion + la diferencia de porcentaje de su equipo</small><br>
+<small>Pierde: pierde su inversion</small><br>
+<small>Empata: le devolvemos el 50% de su inversion</small>
+{space10}
 {if isset($matches[0])}
     <table>
         <tr>

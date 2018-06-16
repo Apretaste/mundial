@@ -110,6 +110,7 @@ class Mundial extends Service{
       $response=new Response();
       $response->setEmailLayout('mundial.tpl');
       $response->createFromTemplate("apuestas.tpl",array('matches' => $matches));
+      $response->setCache(10);
     }
     return $response;
   }
@@ -349,13 +350,13 @@ class Mundial extends Service{
         $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND  active=1");
         foreach ($punters as $punter) {
-          $retorno=intval($punter->amount)/2;
+          $retorno=round(intval($punter->amount)/2,2);
           Connection::query("START TRANSACTION;
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           UPDATE person SET credit=credit+$retorno WHERE `email`='{$punter->user}';
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           COMMIT;");
-          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera el 50% de su inversion", 'MUNDIAL', 'IMPORTANT');
+          $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera el 50% de su inversion: $retorno", 'MUNDIAL', 'IMPORTANT');
         }
       }
       else {
@@ -373,7 +374,7 @@ class Mundial extends Service{
         `match`='{$finishMatch->start_date}' AND `team`='{$loserTeam}' AND active=1");
         foreach ($winners as $winner) {
           $ganancia=($winner->team=="HOME")?$visitor_bets:$home_bets;
-          $ganancia=$winner->amount*(1+$ganancia);
+          $ganancia=round($winner->amount*(1+$ganancia),2);
           Connection::query("START TRANSACTION;
           UPDATE person SET credit=credit+$ganancia WHERE `email`='{$winner->user}';
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}';
