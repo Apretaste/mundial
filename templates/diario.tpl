@@ -57,6 +57,6 @@
     </table>
     {space10}
   {/if}
-  {button href="MUNDIAL JUEGOS" caption="Juegue y Gane"}
-  {button href="MUNDIAL CALENDARIO" caption="Vea el Calendario"}
+  {button href="MUNDIAL JUEGOS" size="small" caption="Juegue y Gane"}
+  {button href="MUNDIAL CALENDARIO" size="small" caption="Vea el Calendario"}
 </center>
