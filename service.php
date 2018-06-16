@@ -31,7 +31,7 @@ class Mundial extends Service{
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
     $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches, 'nowGame' => $nowGame));
-    $response->setCache(1);
+    $response->setCache(60);
     return $response;
   }
 
@@ -46,7 +46,7 @@ class Mundial extends Service{
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
     $response->createFromTemplate("calendario.tpl",$data);
-    $response->setCache(12);
+    $response->setCache(240);
     return $response;
   }
 
@@ -397,7 +397,7 @@ class Mundial extends Service{
     $grupos['this']=$this;
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
-    $response->setCache(4);
+    $response->setCache(240);
     $response->createFromTemplate("estadisticas.tpl",$grupos);
     return $response;
   }
