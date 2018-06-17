@@ -68,6 +68,7 @@ class Mundial extends Service{
         $responseContent = ["amount"=>$amount, "credit"=>$profile->credit, "match"=>$match, "team"=>$team];
         $response = new Response();
         $response->subject = "Usted no tiene suficiente credito";
+        $response->setEmailLayout('mundial.tpl');
         $response->createFromTemplate("nocredit.tpl", $responseContent);
         return $response;
       }
@@ -76,6 +77,7 @@ class Mundial extends Service{
       if(!isset($q[0])){
         $response=new Response();
         $response->subject="Error al jugar";
+        $response->setEmailLayout('mundial.tpl');
         $response->createFromText("El partido por el que usted intenta jugar no existe o ya comenzo");
         return $response;
       }
@@ -85,7 +87,19 @@ class Mundial extends Service{
       $team=($team=="HOME")?$q[0]->home_team:$q[0]->visitor_team;
       $response = new Response();
       $response->subject = "Confirmar juego";
+      $response->setEmailLayout('mundial.tpl');
       $response->createFromTemplate("confirmBet.tpl", array('amount' => $amount, 'hash' => $confirmationHash, 'team' => $team));
+    }
+    elseif ($query[0]=="MIOS") {
+      $bets=Connection::query("SELECT A.`home_team`AS home,A.`visitor_team` AS visitor,
+      B.`team` AS team,B.`amount` AS amount,B.`active` AS active, A.`winner` AS winner 
+      FROM `_mundial_matches` AS A 
+      JOIN `_mundial_bets` AS B ON A.`start_date`=B.`match` 
+      AND B.`user`='ricardo@apretaste.com' ORDER BY B.`match` DESC");
+      $response = new Response();
+      $response->subject = "Sus juegos";
+      $response->setEmailLayout('mundial.tpl');
+      $response->createFromTemplate("userBets.tpl", array('bets' => $bets));
     }
     else {
       $this->updateMatches();

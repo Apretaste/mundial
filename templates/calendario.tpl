@@ -1,7 +1,7 @@
 {include file="../includes/appmenu.tpl"}
 <center>
-<h1>​ Calendario del Mundial 2018​ </h1>
-<h2>Fase de Grupos</h2>
+<h1 style="margin:0;">​ Calendario del Mundial 2018​ </h1>
+<h2 style="margin-top:8px;">Fase de Grupos</h2>
   {foreach $faseGrupos as $day}
   <table width="100%" border="1" style="margin-left:auto; margin-right:auto;">
     <tr>
@@ -37,7 +37,7 @@
     {space10}
   {/foreach}
 
-  <h2>Fase Eliminatoria</h2>
+  <h2 style="margin-top:8px;">Fase Eliminatoria</h2>
   {foreach $faseEliminatorias as $day}
   <table width="100%" border="1" style="margin-left:auto; margin-right:auto;">
     <tr>

@@ -1,6 +1,6 @@
 {include file="../includes/appmenu.tpl"}
 <center>
-<h1>​Mundial 2018​ </h1>
+<h1 style="margin:0;">​Mundial 2018​ </h1>
 {if $nowGame!=""}
   <table width="100%" style="margin-left:auto; margin-right:auto;">
     <tr>
@@ -57,6 +57,6 @@
     </table>
     {space10}
   {/if}
-  {button href="MUNDIAL JUEGOS" size="small" caption="Juegue y Gane"}
-  {button href="MUNDIAL CALENDARIO" size="small" caption="Vea el Calendario"}
+  {button href="MUNDIAL JUEGOS" caption="Juegue y Gane"}
+  {button href="MUNDIAL CALENDARIO" caption="Vea el Calendario"}
 </center>

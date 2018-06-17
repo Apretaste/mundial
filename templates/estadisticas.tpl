@@ -1,6 +1,6 @@
 {include file="../includes/appmenu.tpl"}
 <center>
-<h1>Estadisticas de Grupos</h1>
+<h1 style="margin:0;">Estadisticas de Grupos</h1>
 {foreach $grupos as $grupo}
 <table width="100%" style="margin-left:auto; margin-right:auto;">
     <thead>
