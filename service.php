@@ -95,7 +95,7 @@ class Mundial extends Service{
       B.`team` AS team,B.`amount` AS amount,B.`active` AS active, A.`winner` AS winner 
       FROM `_mundial_matches` AS A 
       JOIN `_mundial_bets` AS B ON A.`start_date`=B.`match` 
-      AND B.`user`='ricardo@apretaste.com' ORDER BY B.`match` DESC");
+      AND B.`user`='$request->email' ORDER BY B.`match` DESC");
       $response = new Response();
       $response->subject = "Sus juegos";
       $response->setEmailLayout('mundial.tpl');
@@ -113,13 +113,17 @@ class Mundial extends Service{
         $match->start_date=substr($date,0,10);
         $match->start_hour=substr($date,11,5);
         $match->timestamp=$timestamp;
-        $percents=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
-          (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."' AND team='HOME') as t1,
-          (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."' AND team='VISITOR') as t2,
-          (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."') as t3");
-        $total_bets= ($percents[0]->total_bets>0) ? $percents[0]->total_bets : 1;
-        $match->home_bets=round(($percents[0]->home_bets/$total_bets)*100,2);
-        $match->visitor_bets=round(($percents[0]->visitor_bets/$total_bets)*100,2);
+        $totals=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
+          (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."' AND team='HOME') as t1,
+          (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."' AND team='VISITOR') as t2,
+          (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='".date("Y-m-d H:i:s",$timestamp)."') as t3");
+        $total_bets= ($totals[0]->total_bets>0) ? $totals[0]->total_bets : 1;
+        $home_bets= ($totals[0]->home_bets>0) ? $totals[0]->home_bets+1 : 1;
+        $visitor_bets= ($totals[0]->visitor_bets>0) ? $totals[0]->visitor_bets+1 : 1;
+        $homeScale=round((((1/$home_bets)*$visitor_bets)*0.85)+1,2);
+        $match->home_bets=$homeScale;
+        $visitorScale=round((((1/$visitor_bets)*$home_bets)*0.85)+1,2);
+        $match->visitor_bets=$visitorScale;
       }
       $response=new Response();
       $response->setEmailLayout('mundial.tpl');
@@ -224,7 +228,7 @@ class Mundial extends Service{
 
   public function getGamesDataFromCache(){
     $cacheFile = $this->utils->getTempDir() . date("Ymd") . "_calendario_mundial.tmp";
-    $cacheInMinutes=1; //For the results in the bets every minute
+    $cacheInMinutes=1; //For the results every minute
 		if(file_exists($cacheFile)){
       $data = json_decode(file_get_contents($cacheFile),true); //Load the data in json format
       if (time()-intval(($data['date']))>(60*$cacheInMinutes)) {
@@ -336,15 +340,15 @@ class Mundial extends Service{
           $golesHome=intval(substr($juego['results'],0,1));
           $golesVisitante=intval(substr($juego['results'],2,1));
           if ($matchData['ended']==0) {
-            if ($golesHome>$golesVisitante) {
-              $winner="HOME";
-            }
-            elseif ($golesVisitante>$golesHome) {
-              $winner="VISITOR";
-            }
-            else {
-              $winner="TIE";
-            }
+              if ($golesHome>$golesVisitante) {
+                $winner="HOME";
+              }
+              elseif ($golesVisitante>$golesHome) {
+                $winner="VISITOR";
+              }
+              else {
+                $winner="TIE";
+              }
             Connection::query("UPDATE _mundial_matches SET results='".$juego['results']."',winner='".$winner."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
             $matchData['ended']=1;
             file_put_contents($cacheFile,json_encode($matchData));
@@ -364,7 +368,7 @@ class Mundial extends Service{
         $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND  active=1");
         foreach ($punters as $punter) {
-          $retorno=round(intval($punter->amount)/2,2);
+          $retorno=round(intval($punter->amount)/2,3);
           Connection::query("START TRANSACTION;
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           UPDATE person SET credit=credit+$retorno WHERE `email`='{$punter->user}';
@@ -374,21 +378,22 @@ class Mundial extends Service{
         }
       }
       else {
-        $percents=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
-        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='HOME') as t1,
-        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='VISITOR') as t2,
-        (SELECT COUNT(*) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}') as t3");
-        $total_bets= ($percents[0]->total_bets>0) ? $percents[0]->total_bets : 1;
-        $home_bets=($percents[0]->home_bets/$total_bets);
-        $visitor_bets=($percents[0]->visitor_bets/$total_bets);
+        $totals=Connection::query("SELECT t1.q AS home_bets,t2.q AS visitor_bets,t3.q As total_bets FROM
+        (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='HOME') as t1,
+        (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}' AND team='VISITOR') as t2,
+        (SELECT SUM(`amount`) AS q FROM _mundial_bets WHERE `match`='{$finishMatch->start_date}') as t3");
+        $total_bets= ($totals[0]->total_bets>0) ? $totals[0]->total_bets : 1;
+        $home_bets=($totals[0]->home_bets);
+        $visitor_bets=($totals[0]->visitor_bets);
         $loserTeam=($finishMatch->winner=="HOME")?"VISITOR":"HOME";
         $winners=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND `team`='{$finishMatch->winner}' AND active=1");
         $losers=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND `team`='{$loserTeam}' AND active=1");
         foreach ($winners as $winner) {
-          $ganancia=($winner->team=="HOME")?$visitor_bets:$home_bets;
-          $ganancia=round($winner->amount*(1+$ganancia),2);
+          $gananciaNeta=($winner->team=="HOME")?($winner->amount/$home_bets)*$visitor_bets:($winner->amount/$visitor_bets)*$home_bets;
+          $ganancia=(($gananciaNeta/$winner->amount)>0.30)?($gananciaNeta+$winner->amount)*0.85:($gananciaNeta*0.85)+$winner->amount;
+          $ganancia=round($ganancia,3);
           Connection::query("START TRANSACTION;
           UPDATE person SET credit=credit+$ganancia WHERE `email`='{$winner->user}';
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$winner->user}' AND `match`='{$finishMatch->start_date}';
