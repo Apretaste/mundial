@@ -363,7 +363,7 @@ class Mundial extends Service{
     $finishedMatches=Connection::query("SELECT * FROM _mundial_matches WHERE
     UNIX_TIMESTAMP(CURRENT_TIMESTAMP)-UNIX_TIMESTAMP(end_date)>600 AND payed=0 AND winner IS NOT NULL");
     foreach ($finishedMatches as $finishMatch) {
-
+      Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
       if ($finishMatch->winner=='TIE') {
         $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND  active=1");
@@ -372,7 +372,6 @@ class Mundial extends Service{
           Connection::query("START TRANSACTION;
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           UPDATE person SET credit=credit+$retorno WHERE `email`='{$punter->user}';
-          UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           COMMIT;");
           $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera el 50% de su inversion: $retorno", 'MUNDIAL', 'IMPORTANT');
         }
@@ -405,7 +404,6 @@ class Mundial extends Service{
           $this->utils->addNotification($loser->user, 'Mundial',"El equipo al que jugo perdio el partido, usted no gano nada", 'MUNDIAL', 'IMPORTANT');
         }
       }
-      Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
     }
   }
   /**
