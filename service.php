@@ -61,7 +61,7 @@ class Mundial extends Service{
     if ($query[0]=="JUGAR") {
       $match=$query[1];
       $team=$query[2];
-      $amount=abs(floatval($query[3]));
+      $amount=abs(floatval(str_replace(",",".",$query[3])));
       $profile = $this->utils->getPerson($request->email);
       if ($profile->credit < $amount)
       {
