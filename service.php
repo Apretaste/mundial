@@ -207,7 +207,7 @@ class Mundial extends Service{
     $crawler->filter('div#fi-list-view > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseEliminatorias){
       $fase=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
-      $item->filter('div.fi-mu.fixture')->each(function($item,$i) use (&$juegos){
+      $item->filter('div.fi-mu.fixture, div.fi-mu.result')->each(function($item,$i) use (&$juegos){
         $hora=$item->filter('div.fi-mu__info__datetime')->text();
         $hora=str_replace(' Hora Local','',$hora);
         $horautc=substr($item->filter('div.fi-s__score.fi-s__date-HHmm')->attr('data-timeutc'),0,2);

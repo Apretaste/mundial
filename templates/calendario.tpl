@@ -19,6 +19,9 @@
           {$juego['grupo']}<br>
           {$juego['estadio']}<br>
           {$juego['ciudad']}
+          {if $juego['results']!=""}
+            <br>Resultados: {$juego['results']}
+          {/if}
         </td>
         <td align="center">
           {$juego['homeTeam']}<br>
