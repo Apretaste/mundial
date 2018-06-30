@@ -1,27 +1,30 @@
 {include file="../includes/appmenu.tpl"}
 <center>
 <h1 style="margin:0;">​Mundial 2018​ </h1>
-{if $nowGame!=""}
-  <table width="100%" style="margin-left:auto; margin-right:auto;">
-    <tr>
-      <th colspan="3"><h2 style="margin:0;">Justo ahora!</h2></th>
-    </tr>
-    <tr>
-      <td align="center" colspan="3">{$nowGame['hora']}</td>
-    </tr>
-    <tr>
-      <td align="center" width="40%">
-        <h2 style="margin:0;">{$nowGame['homeTeam']}</h2>
-        <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['homeIcon']}</p>
-      </td>
-      <td align="center" width="20%"><h2 style="margin:0;">{$nowGame['minutes']}<br>{$nowGame['results']}</h2></td>
-      <td align="center" width="40%">
-        <h2 style="margin:0;">{$nowGame['visitorTeam']}</h2>
-        <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['visitorIcon']}</p>
-      </td>
-    </tr>
-  </table>
+{if count($nowGames)>0}
+<table width="100%" style="margin-left:auto; margin-right:auto;">
+  <tr>
+    <th colspan="3"><h2 style="margin:0;">Justo ahora!</h2></th>
+  </tr>
+{foreach $nowGames as $nowGame}
+  <tr>
+    <td align="center" colspan="3">{$nowGame['hora']}</td>
+  </tr>
+  <tr>
+    <td align="center" width="40%">
+      <h2 style="margin:0;">{$nowGame['homeTeam']}</h2>
+      <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['homeIcon']}</p>
+    </td>
+    <td align="center" width="20%"><h2 style="margin:0;">{$nowGame['minutes']}<br>{$nowGame['results']}</h2></td>
+    <td align="center" width="40%">
+      <h2 style="margin:0;">{$nowGame['visitorTeam']}</h2>
+      <p style="font-weight: bold;font-size: 3em; margin:0;">{$nowGame['visitorIcon']}</p>
+    </td>
+  </tr>
+{/foreach}
+</table>
 {/if}
+
 <h2>Partidos de hoy</h2>
   {if $dayMatches!=false}
   <table width="100%" border="1" style="margin-left:auto; margin-right:auto;">

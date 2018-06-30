@@ -2,10 +2,10 @@
 <center>
 <h1 style="margin:0;">Partidos planificados</h1>
 <h2 style="margin-top:8px;">Juegue por el equipo de su preferencia</h2>
-<small>Gana: inversion + la diferencia de porcentaje de su equipo</small><br>
+<small>Gana: %de inversion respecto al total de su equipo * total del equipo contrario</small><br>
 <small>Pierde: pierde su inversion</small><br>
 <small>Empata: le devolvemos el 50% de su inversion</small><br>
-<small><strong>No no hacemos responsables por sus perdidas</strong></small><br>
+<small><strong>No nos hacemos responsables por sus perdidas</strong></small><br>
 {space5}
 {button href="MUNDIAL JUEGOS MIOS" caption="Sus elecciones" size="small"}
 {space10}

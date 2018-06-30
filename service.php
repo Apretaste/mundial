@@ -10,27 +10,31 @@ class Mundial extends Service{
   *
   **/
   public function _main(Request $request){
+
     $data=$this->getGamesDataFromCache();
     $this->updateMatches();
     $dayMatches=false;
-    foreach ($data['faseGrupos'] as $dia) {
-      if (substr($dia['fecha'],-37,2)==date('d')) {
-        $dayMatches=$dia;
+    foreach ($data['faseEliminatorias'] as $fase) {
+      foreach ($fase['juegos'] as $juego) {
+        if (substr($juego['dmutc'],0,2)==date('d')) {
+          $dayMatches['fecha']=$fase['fase'];
+          $dayMatches['juegos'][]=$juego;
+        }
       }
     }
-    $nowGame="";
+    $nowGames=array();
     foreach ($dayMatches['juegos'] as $juego) {
       if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+7200>time()) {
         $cacheFile = $this->utils->getTempDir().$this->matchTimestamp($juego)."_match_mundial.tmp";
         $matchData=json_decode(file_get_contents($cacheFile),true);
-        $nowGame=$juego;
-        $nowGame['results']=$matchData['results'];
-        $nowGame['minutes']=$matchData['minutes'];
+        $juego['results']=$matchData['results'];
+        $juego['minutes']=$matchData['minutes'];
+        $nowGames[]=$juego;
       }
     }
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
-    $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches, 'nowGame' => $nowGame));
+    $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches, 'nowGames' => $nowGames));
     $response->setCache(60);
     return $response;
   }
@@ -57,6 +61,7 @@ class Mundial extends Service{
    */
 
   public function _juegos(Request $request){
+
     $query=explode(" ",$request->query);
     if ($query[0]=="JUGAR") {
       $match=$query[1];
@@ -134,6 +139,21 @@ class Mundial extends Service{
   }
 
   /**
+   * @param Request
+   * @return Response
+   * 
+   */
+
+  public function _comentarios(Request $request){
+    if(!empty($request->query)){
+      $client=new Client();
+      $crawler=$client->request('GET',$request->query);
+      die($crawler->html());
+    }
+  }
+
+
+  /**
    *
    * @return Array
    */
@@ -198,12 +218,14 @@ class Mundial extends Service{
         if ($grupo==null) $grupo="Grupo";
         $estadio=$item->filter('div.fi__info__location > div.fi__info__stadium')->text();
         $ciudad=$item->filter('div.fi__info__location > div.fi__info__venue')->text();
-        //$estado=$item->filter('div.fi-mu__status > div.fi-s__status')->text();
+        $results=trim($item->filter('div.fi-mu__m > div.fi-s-wrap span.fi-s__scoreText')->text());
+        $results=(strlen($results)==3)?$results:"";
+        $estado=($item->filter('div.fi-mu__status > div.fi-s__status span:not(.hidden)')->count()>0)?trim($item->filter('div.fi-mu__status > div.fi-s__status span:not(.hidden)')->text()):"";
         $homeTeam=$item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nText')->text();
-        $homeIcon="";//$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text());
+        $homeIcon=(strlen($homeTeam)>3)?$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text()):"";
         $visitorTeam=$item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nText')->text();
-        $visitorIcon="";//$this->icon($item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nTri')->text());
-        //$detalles=$item->filter('div.fi-mu__m > div.fi-mu__details')->text();
+        $visitorIcon=(strlen($visitorTeam)>3)?$this->icon($item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nTri')->text()):"";
+        $link="https://es.fifa.com".$item->attr('href');
 
         $juegos[]=['hora' => $hora,
                   'dmutc' => $dmutc,
@@ -213,7 +235,10 @@ class Mundial extends Service{
                   'homeTeam' => $homeTeam,
                   'homeIcon' => $homeIcon,
                   'visitorTeam' => $visitorTeam,
-                  'visitorIcon' => $visitorIcon];
+                  'visitorIcon' => $visitorIcon,
+                  'status' => $estado,
+                  'results' => $results,
+                  'link' => $link];;
       });
       $faseEliminatorias[]=['fase' => $fase,
                             'juegos' => $juegos];
@@ -305,55 +330,68 @@ class Mundial extends Service{
     $h=substr($juego['hora'],23,5);
     $date=$d.'/'.$_month[intval($m)].'/2018:'.$h.':00 -0400';
     $start_date=strtotime($date);
+    if (($juego['homeTeam']=="Arabia Saudí" and $juego['visitorTeam']=="Egipto") or
+    ($juego['homeTeam']=="RI de Irán" and $juego['visitorTeam']=="Portugal") or
+    ($juego['homeTeam']=="Dinamarca" and $juego['visitorTeam']=="Francia") or
+    ($juego['homeTeam']=="Islandia" and $juego['visitorTeam']=="Croacia") or
+    ($juego['homeTeam']=="México" and $juego['visitorTeam']=="Suecia") or
+    ($juego['homeTeam']=="Suiza" and $juego['visitorTeam']=="Costa Rica") or
+    ($juego['homeTeam']=="Senegal" and $juego['visitorTeam']=="Colombia") or
+    ($juego['homeTeam']=="Inglaterra" and $juego['visitorTeam']=="Bélgica")) {
+      $start_date++;
+    }
+
     return $start_date;
   }
 
   public function updateMatches(){
     $data=$this->getGamesDataFromCache();
-    foreach ($data['faseGrupos'] as $day) {
-      foreach ($day['juegos'] as $juego) {
-        $start_date=$this->matchTimestamp($juego);
-        $end_date=$start_date+7200; //2 hours
-        $cacheFile = $this->utils->getTempDir() . $start_date . "_match_mundial.tmp";
-        if ($end_date>time()) {
-          if (!file_exists($cacheFile)) {
-            Connection::query("INSERT IGNORE INTO _mundial_matches(home_team,visitor_team,start_date,end_date)
-            VALUES('".$juego['homeTeam']."','".$juego['visitorTeam']."','".date("Y-m-d H:i:s",$start_date)."','".date("Y-m-d H:i:s",$end_date)."')");
-            file_put_contents($cacheFile,json_encode(array('lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'ended' => 0)));
+    foreach ($data['faseEliminatorias'] as $fase) {
+      foreach ($fase['juegos'] as $juego) {
+        if (strlen($juego['homeTeam'])>3) {
+          $start_date=$this->matchTimestamp($juego);
+          $end_date=$start_date+7200; //2 hours
+          $cacheFile = $this->utils->getTempDir() . $start_date . "_match_mundial.tmp";
+          if ($end_date>time()) {
+            if (!file_exists($cacheFile)) {
+              Connection::query("INSERT IGNORE INTO _mundial_matches(home_team,visitor_team,start_date,end_date)
+              VALUES('".$juego['homeTeam']."','".$juego['visitorTeam']."','".date("Y-m-d H:i:s",$start_date)."','".date("Y-m-d H:i:s",$end_date)."')");
+              file_put_contents($cacheFile,json_encode(array('lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'ended' => 0)));
+            }
+            $matchData=json_decode(file_get_contents($cacheFile),true);
           }
-          $matchData=json_decode(file_get_contents($cacheFile),true);
-        }
-        if ($start_date<time() and $end_date>time()) {
-          if (time()-filemtime($cacheFile)>60) { //Cada minuto
-            $client=new Client();
-            $crawler=$client->request('GET',$juego['link']);
-            $juego['results']=($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->count()>0)?trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text()):"0-0";
-            $minutes=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-mu__status > div.fi-s__status > span.period.minute')->text());
-            $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes, 'ended' => 0]; //Aqui modificamos los resultados del partido;
-            file_put_contents($cacheFile,json_encode($matchData));
-            Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
+          if ($start_date<time() and $end_date>time()) {
+            if (time()-filemtime($cacheFile)>60) { //Cada minuto
+              $client=new Client();
+              $crawler=$client->request('GET',$juego['link']);
+              $juego['results']=($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->count()>0)?trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-s-wrap > div > div.fi-s__score.fi-s__date-HHmm > span')->text()):"0-0";
+              $minutes=trim($crawler->filter('div.fi-mh.live > div.fi-mu__m > div.fi-mu__status > div.fi-s__status > span.period.minute')->text());
+              $matchData=['lastUpdate' => time(),'results' => $juego['results'], 'status'=> $juego['status'], 'link' => $juego['link'], 'minutes' => $minutes, 'ended' => 0]; //Aqui modificamos los resultados del partido;
+              file_put_contents($cacheFile,json_encode($matchData));
+              Connection::query("UPDATE _mundial_matches SET results='".$matchData['results']."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
+            }
           }
-        }
 
-        if ($end_date<time() and $end_date+1800>time() and $juego['status']=='Final del partido') {
-          $matchData=json_decode(file_get_contents($cacheFile),true);
-          $golesHome=intval(substr($juego['results'],0,1));
-          $golesVisitante=intval(substr($juego['results'],2,1));
-          if ($matchData['ended']==0) {
-              if ($golesHome>$golesVisitante) {
-                $winner="HOME";
-              }
-              elseif ($golesVisitante>$golesHome) {
-                $winner="VISITOR";
-              }
-              else {
-                $winner="TIE";
-              }
-            Connection::query("UPDATE _mundial_matches SET results='".$juego['results']."',winner='".$winner."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
-            $matchData['ended']=1;
-            file_put_contents($cacheFile,json_encode($matchData));
+          if ($end_date<time() and $end_date+1800>time() and $juego['status']=='Final del partido') {
+            $matchData=json_decode(file_get_contents($cacheFile),true);
+            $golesHome=intval(substr($juego['results'],0,1));
+            $golesVisitante=intval(substr($juego['results'],2,1));
+            if ($matchData['ended']==0) {
+                if ($golesHome>$golesVisitante) {
+                  $winner="HOME";
+                }
+                elseif ($golesVisitante>$golesHome) {
+                  $winner="VISITOR";
+                }
+                else {
+                  $winner="TIE";
+                }
+              Connection::query("UPDATE _mundial_matches SET results='".$juego['results']."',winner='".$winner."' WHERE start_date='".date("Y-m-d H:i:s",$start_date)."'");
+              $matchData['ended']=1;
+              file_put_contents($cacheFile,json_encode($matchData));
+            }
           }
-        }
+        }  
       }
     }
   }
@@ -363,7 +401,7 @@ class Mundial extends Service{
     $finishedMatches=Connection::query("SELECT * FROM _mundial_matches WHERE
     UNIX_TIMESTAMP(CURRENT_TIMESTAMP)-UNIX_TIMESTAMP(end_date)>600 AND payed=0 AND winner IS NOT NULL");
     foreach ($finishedMatches as $finishMatch) {
-      Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
+
       if ($finishMatch->winner=='TIE') {
         $punters=Connection::query("SELECT * FROM _mundial_bets WHERE
         `match`='{$finishMatch->start_date}' AND  active=1");
@@ -372,6 +410,7 @@ class Mundial extends Service{
           Connection::query("START TRANSACTION;
           UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           UPDATE person SET credit=credit+$retorno WHERE `email`='{$punter->user}';
+          UPDATE _mundial_bets SET active=0 WHERE `user`='{$punter->user}' AND `match`='{$finishMatch->start_date}';
           COMMIT;");
           $this->utils->addNotification($punter->user, 'Mundial',"El equipo al que jugo empato el partido, usted recupera el 50% de su inversion: $retorno", 'MUNDIAL', 'IMPORTANT');
         }
@@ -404,6 +443,7 @@ class Mundial extends Service{
           $this->utils->addNotification($loser->user, 'Mundial',"El equipo al que jugo perdio el partido, usted no gano nada", 'MUNDIAL', 'IMPORTANT');
         }
       }
+      Connection::query("UPDATE _mundial_matches SET payed=1 WHERE `start_date`='{$finishMatch->start_date}'");
     }
   }
   /**
@@ -413,6 +453,7 @@ class Mundial extends Service{
    */
   public function _estadisticas(Request $request)
   {
+
     $grupos=$this->getStatisticsDataFromCache();
     $grupos['this']=$this;
     $response=new Response();
