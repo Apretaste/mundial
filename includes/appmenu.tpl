@@ -9,7 +9,6 @@
 			<td>{link href="MUNDIAL CALENDARIO" caption="&#128197;" style="color:#326295; text-decoration: none;"}</td>
 			<td>{link href="MUNDIAL JUEGOS" caption="💰" style="color:#326295; text-decoration: none;"}</td>
 			<td>{link href="MUNDIAL ESTADISTICAS" caption="📋" style="color:#326295; text-decoration: none;"}</td>
-			<td>{link href="MUNDIAL COMENTARIOS" caption="💭" style="color:#326295; text-decoration:none; font-size:18px;"}</td>
 		</tr>
 	</table>
 	{space10}
