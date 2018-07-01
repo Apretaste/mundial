@@ -23,15 +23,18 @@ class Mundial extends Service{
       }
     }
     $nowGames=array();
-    foreach ($dayMatches['juegos'] as $juego) {
-      if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+7200>time()) {
-        $cacheFile = $this->utils->getTempDir().$this->matchTimestamp($juego)."_match_mundial.tmp";
-        $matchData=json_decode(file_get_contents($cacheFile),true);
-        $juego['results']=$matchData['results'];
-        $juego['minutes']=$matchData['minutes'];
-        $nowGames[]=$juego;
+    if ($dayMatches) {
+      foreach ($dayMatches['juegos'] as $juego) {
+        if ($this->matchTimestamp($juego)<time() and $this->matchTimestamp($juego)+7200>time()) {
+          $cacheFile = $this->utils->getTempDir().$this->matchTimestamp($juego)."_match_mundial.tmp";
+          $matchData=json_decode(file_get_contents($cacheFile),true);
+          $juego['results']=$matchData['results'];
+          $juego['minutes']=$matchData['minutes'];
+          $nowGames[]=$juego;
+        }
       }
     }
+
     $response=new Response();
     $response->setEmailLayout('mundial.tpl');
     $response->createFromTemplate("diario.tpl",array('dayMatches' => $dayMatches, 'nowGames' => $nowGames));
@@ -207,7 +210,7 @@ class Mundial extends Service{
     $crawler->filter('div#fi-list-view > div.fi-matchlist > div.fi-mu-list')->each(function($item,$i) use (&$faseEliminatorias){
       $fase=$item->filter('div.fi-mu-list__head > span')->text();
       $juegos=array();
-      $item->filter('div.fi-mu.fixture, div.fi-mu.result')->each(function($item,$i) use (&$juegos){
+      $item->filter('div.fi-mu.fixture, div.fi-mu.result, div.fi-mu.live')->each(function($item,$i) use (&$juegos){
         $hora=$item->filter('div.fi-mu__info__datetime')->text();
         $hora=str_replace(' Hora Local','',$hora);
         $horautc=substr($item->filter('div.fi-s__score.fi-s__date-HHmm')->attr('data-timeutc'),0,2);
@@ -225,7 +228,7 @@ class Mundial extends Service{
         $homeIcon=(strlen($homeTeam)>3)?$this->icon($item->filter('div.fi-mu__m div.home > div.fi-t__n > span.fi-t__nTri')->text()):"";
         $visitorTeam=$item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nText')->text();
         $visitorIcon=(strlen($visitorTeam)>3)?$this->icon($item->filter('div.fi-mu__m div.away > div.fi-t__n> span.fi-t__nTri')->text()):"";
-        $link="https://es.fifa.com".$item->attr('href');
+        $link="https://es.fifa.com".$item->parents()->attr('href');
 
         $juegos[]=['hora' => $hora,
                   'dmutc' => $dmutc,
